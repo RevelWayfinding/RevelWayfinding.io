@@ -230,7 +230,7 @@
         console.log(window.localStorage.getItem("api_key"));
         api_key = window.localStorage.getItem("api_key");
         $.ajax({
-            url: "http://api.reveldigital.com/account?api_key=" + api_key,
+            url: "https://api.reveldigital.com/account?api_key=" + api_key,
             type: 'GET',
             dataType: 'json',
             success: function(res) {
@@ -325,7 +325,7 @@
         // Check if the entered API Key is valid.
         api_key = document.getElementById("api_key").value;
         $.ajax({
-            url: "http://api.reveldigital.com/account?api_key=" + api_key,
+            url: "https://api.reveldigital.com/account?api_key=" + api_key,
             type: 'GET',
             dataType: 'json',
             success: function(res) {
