@@ -1,0 +1,475 @@
+<!DOCTYPE HTML>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>PathFinding.js</title>
+
+    <link rel="stylesheet" href="./css/style.css" />
+    <link rel="stylesheet" href="./lib/themes/jquery.ui.all.css" />
+
+    <script type="text/javascript" src="./lib/raphael-min.js"></script>
+    <script type="text/javascript" src="./lib/es5-shim.min.js"></script>
+    <script type="text/javascript" src="./lib/jquery-1.7.2.min.js"></script>
+    <script type="text/javascript" src="./lib/state-machine.min.js"></script>
+    <script type="text/javascript" src="./lib/async.min.js"></script>
+
+    <script type="text/javascript" src="./lib/ui/jquery.ui.core.min.js"></script>
+    <script type="text/javascript" src="./lib/ui/jquery.ui.widget.min.js"></script>
+    <script type="text/javascript" src="./lib/ui/jquery.ui.mouse.min.js"></script>
+    <script type="text/javascript" src="./lib/ui/jquery.ui.draggable.min.js"></script>
+    <script type="text/javascript" src="./lib/ui/jquery.ui.accordion.min.js"></script>
+    <script type="text/javascript" src="./lib/ui/jquery.ui.slider.min.js"></script>
+    <script type="text/javascript" src="./lib/pathfinding-browser.min.js"></script>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/4.6.2/firebase.js"></script>
+    <script>
+        // Initialize Firebase
+        var config = {
+            apiKey: "AIzaSyBGsq1l5bq6wNSynm7ozOjqI-0gSux0fQc",
+            authDomain: "wayfinding-9f0fe.firebaseapp.com",
+            databaseURL: "https://wayfinding-9f0fe.firebaseio.com",
+            projectId: "wayfinding-9f0fe",
+            storageBucket: "",
+            messagingSenderId: "1052785583392"
+        };
+        firebase.initializeApp(config);
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/4.6.2/firebase-database.js"></script>
+
+    <style>
+
+    </style>
+
+</head>
+
+<body>
+    <div id="login_container" class="container">
+        <h2>Login Form</h2>
+        <div id="login">
+            <div class="imgcontainer">
+                <img src="images/revel_logo.png" alt="Avatar" class="avatar">
+            </div>
+
+            <div class="container">
+                <label><b>Revel API Key</b></label>
+                <input id="api_key" type="text" placeholder="Enter API Key" name="api_key" required>
+
+                <button id="submit_api" type="submit" class="login_btn">Login</button>
+            </div>
+
+            <div class="container" style="background-color:#f1f1f1">
+                <button type="button" class="cancelbtn">Cancel</button>
+                <span id="new_user" class="psw">New Login? <a href="#">Click here!</a></span>
+            </div>
+        </div>
+    </div>
+
+    <div id="grid_list_container">
+        <div>
+            <div>
+                <ul class="header">
+                    <li class="header">
+                        <a id="account_header"></a>
+                    </li>
+                    <li class="header" style="float:right"><a class="active" id="logout_btn">Logout</a></li>
+                </ul>
+            </div>
+            <table id="buildings_table"></table>
+            <button id="new_grid_btn" class='login_btn'>Add New</button>
+        </div>
+
+        <div id="storeListModal" class="modal">
+            <div class="modal-content">
+                <ul id="storeList"></ul>
+                <button class="button" id="exit_store_list">Close</button>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="editor_container">
+        <div id="img_area" class="floatTL"></div>
+        <div id="draw_area" class="floatTL"></div>
+
+        <div id="algorithm_panel" class="panel right_panel">
+            <h2 id="config_panel_header">Configure Floor 1</h2>
+            <h3>Tile Size</h3>
+            <input type="number" id="tile_size" min="1" max="50" value="10" required> px <br/>
+            <button type="submit" class="button" id="submit">Redraw Grid</button>
+            <button type="submit" class="button" id="config_elevator_btn">Edit Elevator</button>
+            <button type="submit" class="button" id="add_floor_btn">Add Floor</button>
+            <button type="submit" class="button" id="save_floor_btn">Save Floor</button>
+            <button type="submit" class="button" id="prev_floor_btn">Prev Floor</button>
+            <button type="submit" class="button" id="next_floor_btn">Next Floor</button>
+            <button type="submit" class="button" id="show_stores">Show Stores</button>
+            <button class="button" id="get_array">Finish</button>
+        </div>
+
+        <!-- #algorithm_panel -->
+        <div id="play_panel" class="panel right_panel">
+            <button id="button1" class="control_button">Start Search</button>
+            <button id="button2" class="control_button">Pause Search</button>
+            <button id="button3" class="control_button">Clear Walls</button>
+        </div>
+
+        <div id="store_panel" class="panel right_panel">
+            <h3>Add Store Location</h3>
+            <button id="addStore" class="button">ADD</button>
+            <button id="back_btn" class="button">Back To Grids</button>
+            <button id="editStore" class="button">Edit</button>
+        </div>
+        <div id="stats"></div>
+
+        <!-- Create New Grid Modal -->
+        <div id="createGridModal" class="modal">
+
+            <!-- Modal content -->
+            <div class="modal-content">
+                <h3>Enter Image URL's for this floor.</h3>
+                <input type="text" id="grid_url"><br/>
+                <button class="login_btn" id="add_grid_url">Add</button>
+                <h4>Tile Size</h4>
+                <input type="number" id="tile_size" min="1" max="50" value="10" required> px <br/>
+                <h3>Click Create Grid to load your new grid.</h3>
+                <button class="login_btn" id="create_grid">Create Grid</button>
+
+            </div>
+
+        </div>
+
+        <!-- Create/Edit Elevators Modal -->
+        <div id="configElevatorModal" class="modal">
+            <!-- Modal content -->
+            <div class="modal-content">
+                <h2>Configure Elevators/Stairs</h2>
+                <h3>Enter New Elevator Name</h3>
+                <input type="text" id="elevator_name"><br/>
+                <button class="button" style="width: 95%" id="add_new_elevator">Add New Elevator</button>
+                <h3>Edit Existing Elevator</h3>
+                <select id="select_elevator"></select><br/>
+                <button class="button" id="add_to_existing_elevator">Add Current Floor</button>
+                <button class="button" onclick="document.getElementById('configElevatorModal').style.display = 'none';">Close</button>
+
+            </div>
+
+        </div>
+
+        <div id="addStoreModal" class="modal">
+
+            <!-- Modal content -->
+            <div class="modal-content">
+                <h4>Add Store Information</h4>
+                Store Name: <input type="text" id="store_name"> <br> Catagories: <input type="text" id="store_catagories"><br> Description: <input type="text" id="store_description"><br> Store Hours: <input type="text" id="store_hours"><br> Image URL:
+                <input type="text" id="store_image"><br>
+                <button class="button" id="continue_btn">Continue</button>
+                <button class="button" id="no_store_add">Cancel</button>
+            </div>
+
+        </div>
+
+        <div id="editStoreModal" class="modal">
+
+            <!-- Modal content -->
+            <div class="modal-content">
+                <h4>Edit Store Information</h4>
+                Select Store: <select id="select_store"></select><button class="button" id="load_store_btn">Load Store</button><br/> Store Name: <input type="text" id="edit_store_name"><br/> Catagories: <input type="text" id="edit_store_catagories"><br/>                Description: <input type="text" id="edit_store_description"><br/> Store Hours: <input type="text" id="edit_store_hours"><br/> Image URL: <input type="text" id="edit_store_image"><br/>
+                <button class="button" id="edit_continue_btn">Continue</button>
+                <button class="button" id="edit_no_store_add">Cancel</button>
+            </div>
+
+        </div>
+
+        <div id="loadScreen">
+            Loading...
+            <div class="loader"></div>
+        </div>
+
+
+        <script type="text/javascript" src="./js/main.js"></script>
+        <script type="text/javascript" src="./js/view.js"></script>
+        <script type="text/javascript" src="./js/controller.js"></script>
+        <script type="text/javascript" src="./js/panel.js"></script>
+
+        <!-- Add New Grid Modal -->
+        <div id="myModal" class="modal">
+
+            <!-- Modal content -->
+            <div class="modal-content">
+                <h4>Enter a name for your grid.</h4>
+                <input type="text" id="buildingName"><br/>
+                <h4>Enter a description for your grid.</h4>
+                <input type="text" id="buildingDescription"><br/>
+                <button class="button" id="add_name">Add</button>
+                <button class="button" id="no_add">Cancel</button>
+            </div>
+
+        </div>
+
+    </div>
+
+</body>
+
+<script>
+    document.getElementById("storeListModal").style.display = "none";
+    document.getElementById("addStoreModal").style.display = "none";
+    document.getElementById("editStoreModal").style.display = "none";
+    document.getElementById("loadScreen").style.display = "none";
+    document.getElementById("configElevatorModal").style.display = "none";
+
+    // Database info and globals
+    //-------------------------------------------------------------------------------------
+    var database = firebase.database();
+    var account = null;
+    var revel_account = null;
+    var api_key;
+
+    // Checking if user has already logged in and brings them to the list page if they are.
+    if (window.localStorage.getItem("api_key")) {
+        console.log(window.localStorage.getItem("api_key"));
+        api_key = window.localStorage.getItem("api_key");
+        $.ajax({
+            url: "http://api.reveldigital.com/account?api_key=" + api_key,
+            type: 'GET',
+            dataType: 'json',
+            success: function(res) {
+                revel_account = res;
+                firebase.database().ref('/' + api_key).once('value').then(function(snapshot) {
+                    account = snapshot.val();
+                    if (!account) {
+                        firebase.database().ref('/' + api_key).set({
+                            accountName: res.name,
+                            buildings: []
+                        });
+                    }
+                });
+                document.getElementById("account_header").innerHTML = res.name;
+                loadListPage();
+            },
+            error: function(XMLHttpRequest, textStatus, errorThrown) {
+                alert("Error: Invalid API Key.");
+            }
+        });
+    } else {
+        document.getElementById("grid_list_container").style.display = "none";
+        document.getElementById("editor_container").style.display = "none";
+    }
+
+    function writeGridData(buildingName, floorGrids, buildingDesc) {
+        firebase.database().ref('/' + api_key + '/buildings/' + buildingName).set({
+            floorGrids: floorGrids,
+            buildingDesc: buildingDesc
+        });
+        //console.log(floorGrids);
+    }
+
+    function deleteGridData(buildingName) {
+        console.log(buildingName);
+        if (confirm('Are you sure you want to Delete this grid in the database?')) {
+            // Delete it!
+            var del_obj = firebase.database().ref('/' + api_key + '/buildings/' + buildingName);
+            del_obj.remove().then(function(ref) {
+                // data has been deleted locally and in the database
+                loadListPage();
+            }, function(error) {
+                console.log("Error:", error);
+            });
+        } else {
+            // Do nothing!
+        }
+    }
+
+    function showStores(building_name) {
+
+        var building_stores = [];
+
+        firebase.database().ref('/' + api_key + '/buildings/' + building_name).once('value').then(function(snapshot) {
+            building = snapshot.val();
+            var obj = JSON.parse(building.floorGrids);
+            if (obj) {
+
+                var storeList = document.getElementById('storeList')
+
+                // Populate list on modal
+                for (var x = 1; x < obj.length; x++) {
+                    for (var y = 0; y < obj[x].storeInfo.length; y++) {
+                        if (obj[x].storeInfo[y].name != 'start') {
+                            building_stores.push(obj[x].storeInfo[y].name);
+                            var li = document.createElement('li');
+                            var store_text = document.createTextNode(obj[x].storeInfo[y].name);
+                            li.appendChild(store_text);
+                            storeList.appendChild(li);
+                        }
+                    }
+                }
+                var index = building_stores.indexOf('start');
+                building_stores.splice(index, 1);
+
+                // Show modal
+                document.getElementById("storeListModal").style.display = "block";
+            }
+        });
+
+    }
+
+    exit_store_list.onclick = function() {
+        $('#storeList').empty();
+        document.getElementById("storeListModal").style.display = "none";
+    }
+
+    //-------------------------------------------------------------------------------------
+    // Start of JS code for login page.
+    //-------------------------------------------------------------------------------------
+    submit_api.onclick = function() {
+        // Check if the entered API Key is valid.
+        api_key = document.getElementById("api_key").value;
+        $.ajax({
+            url: "http://api.reveldigital.com/account?api_key=" + api_key,
+            type: 'GET',
+            dataType: 'json',
+            success: function(res) {
+                window.localStorage.setItem("api_key", api_key);
+                console.log(window.localStorage.getItem("api_key"));
+                revel_account = res;
+                firebase.database().ref('/' + api_key).once('value').then(function(snapshot) {
+                    account = snapshot.val();
+                    if (!account) {
+                        firebase.database().ref('/' + api_key).set({
+                            accountName: res.name,
+                            buildings: []
+                        });
+                    }
+                });
+                document.getElementById("account_header").innerHTML = res.name;
+                loadListPage();
+            },
+            error: function(XMLHttpRequest, textStatus, errorThrown) {
+                alert("Error: Invalid API Key.");
+            }
+        });
+    }
+
+    new_user.onclick = function() {
+        // Change login button text
+        document.getElementById("submit_api").innerHTML = "Create New Account!";
+        document.getElementById("new_user").innerHTML = "Already a User? <a id='old_user' href='file:///C:/Users/8kyle/OneDrive/Documents/Revel-Wayfinding/ClientSite/login.html'>Click here!</a>";
+    }
+
+    //-------------------------------------------------------------------------------------
+    // JS code for page 2
+    //-------------------------------------------------------------------------------------
+    function loadListPage() {
+        document.getElementById("grid_list_container").style.display = "inline";
+        document.getElementById("login_container").style.display = "none";
+        document.getElementById("editor_container").style.display = "none";
+        document.getElementById("buildings_table").innerHTML = "";
+        firebase.database().ref('/' + api_key + '/buildings').once('value').then(function(snapshot) {
+            // Getting Grid Info From Firebase
+            if (snapshot.val() !== null) {
+                var keys = Object.keys(snapshot.val());
+                var db = snapshot.val();
+                var buildings_table = document.getElementById("buildings_table");
+                // Create Table Header Row
+                var thr = document.createElement('tr');
+                // Create table headers
+                var th1 = document.createElement('th');
+                var gridhead = document.createTextNode('Grid Name');
+                th1.appendChild(gridhead);
+                var th2 = document.createElement('th');
+                var descriptionhead = document.createTextNode('Grid Description');
+                th2.appendChild(descriptionhead);
+                var th3 = document.createElement('th');
+                var editRow = document.createTextNode('Edit');
+                th3.appendChild(editRow);
+                var th4 = document.createElement('th');
+                var deleteRow = document.createTextNode('Delete');
+                th4.appendChild(deleteRow);
+                var th5 = document.createElement('th');
+                var storesRow = document.createTextNode('Store List');
+                th5.appendChild(storesRow);
+                // Add Headers to Row
+                thr.appendChild(th1);
+                thr.appendChild(th2);
+                thr.appendChild(th3);
+                thr.appendChild(th4);
+                thr.appendChild(th5);
+                // add header row to Table
+                buildings_table.appendChild(thr);
+                if (db) {
+                    for (key in keys) {
+                        // Row Info
+                        var key = keys[key];
+                        var row = db[key];
+                        //console.log(key);
+                        //console.log(db);
+                        //console.log(row.buildingDesc);
+                        var floorGrids = row.floorGrids;
+                        var buildingDesc = row.buildingDesc;
+                        // Creating Rows and Delete button
+                        var tr = document.createElement('tr');
+                        var td1 = document.createElement('td');
+                        var td2 = document.createElement('td');
+                        var td3 = document.createElement('td');
+                        var td4 = document.createElement('td');
+
+                        var td5 = document.createElement('td');
+
+                        var delButton = document.createElement('button');
+                        var editButton = document.createElement('button');
+                        td3.innerHTML = "<button class='login_btn' onclick=loadOldGrid('" + api_key + "','" + key + "')>Edit</button>";
+                        td4.innerHTML = "<button class='login_btn' onclick=deleteGridData('" + key + "')>Delete</button>";
+
+                        td5.innerHTML = "<button class='login_btn' onclick=showStores('" + key + "')>Stores</button>";
+
+                        // Adding info to rows and delete button
+                        var text1 = document.createTextNode(key);
+                        var text2 = document.createTextNode(buildingDesc);
+                        var btnText = document.createTextNode("Delete");
+                        td1.appendChild(text1);
+                        td2.appendChild(text2);
+                        //delButton.appendChild(btnText);
+                        tr.appendChild(td1);
+                        tr.appendChild(td2);
+                        tr.appendChild(td3);
+                        tr.appendChild(td4);
+
+                        tr.appendChild(td5);
+
+                        buildings_table.appendChild(tr);
+                    }
+                }
+            }
+        });
+    }
+
+    logout_btn.onclick = function() {
+        window.localStorage.setItem("api_key", "");
+        document.getElementById("grid_list_container").style.display = "none";
+        document.getElementById("login_container").style.display = "inline";
+        document.getElementById("editor_container").style.display = "none";
+    }
+
+    back_btn.onclick = function() {
+        location.reload();
+        /*
+        document.getElementById("grid_list_container").style.display = "inline";
+        document.getElementById("login_container").style.display = "none";
+        document.getElementById("editor_container").style.display = "none";
+        */
+    }
+
+    new_grid_btn.onclick = function() {
+        document.getElementById("createGridModal").style.display = "inline";
+        document.getElementById("editor_container").style.display = "inline";
+        document.getElementById("login_container").style.display = "none";
+        document.getElementById("grid_list_container").style.display = "none";
+
+        loadEditor();
+        //console.log(revel_account.name);
+        //document.getElementById("editor_header").innerHTML = revel_account.name;
+
+    }
+</script>
+
+</html>
